@@ -1,0 +1,2 @@
+Current implementation for hashmapping files and their sizes sizes doesn't allow for updating the hashmap when the file size changes.
+Format the file explorer into columns, and give a length limit to the file name column.
