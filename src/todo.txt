@@ -1,3 +1,5 @@
 Current implementation for hashmapping files and their sizes sizes doesn't allow for updating the hashmap when the file size changes.
 Format the file explorer into columns, and give a length limit to the file name column.
-File and Folder dialog open at same time and the x button on them doesnt work (remove the X button in favor of the close button)
+File and Folder dialog open at same time 
+File and Folder dialog x button doesnt work (remove the X button in favor of the close button)
+Check if file or folder exists before creating it, and if it does, prompt the user to overwrite it.
