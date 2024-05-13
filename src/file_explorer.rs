@@ -14,6 +14,10 @@ pub struct FileExplorer {
     height: f32,
     path: PathBuf,
     size_cache: Arc<Mutex<std::collections::HashMap<PathBuf, u64>>>,
+    create_folder_dialog: bool,
+    create_file_dialog: bool,
+    folder_name: String,
+    file_name: String,
 }
 
 impl Default for FileExplorer {
@@ -41,7 +45,11 @@ impl FileExplorer {
                     }
                 },
                 None => Arc::new(Mutex::new(std::collections::HashMap::new())),
-            })
+            }),
+            create_folder_dialog: false,
+            create_file_dialog: false,
+            folder_name: String::new(),
+            file_name: String::new(),
         }
     }
 
@@ -104,40 +112,7 @@ impl FileExplorer {
                 if ui.button(egui::RichText::new("Create Folder").size(
                     Self::calculate_window_size(self.width, self.height)
                 )).clicked() {
-
-                    let mut folder_name: String = String::new();
-                    let mut should_create: bool = false;
-                    let mut open_dialog: bool = true;
-
-                    egui::Window::new("Create Folder").show(ui.ctx(), |ui: &mut egui::Ui| {
-                        ui.horizontal(|ui: &mut egui::Ui| {
-                            ui.label("Folder Name:");
-                            ui.text_edit_singleline(&mut folder_name);
-                        });
-
-                        ui.horizontal(|ui: &mut egui::Ui| {
-                            if ui.button("Cancel").clicked() {
-                                open_dialog = false;
-                            }
-
-                            ui.separator();
-
-                            if ui.button("Create").clicked() {
-                                should_create = true;
-                                open_dialog = false;
-                            }
-                        });
-                    });
-
-                    if should_create {
-                        let mut path: PathBuf = self.path.clone();
-                        path.push(&folder_name);
-                        std::fs::create_dir(path).unwrap();
-                    }
-
-                    if !open_dialog {
-                        folder_name.clear();
-                    }
+                    self.create_folder_dialog = true;
                 }
 
                 ui.separator();
@@ -145,40 +120,7 @@ impl FileExplorer {
                 if ui.button(egui::RichText::new("Create File").size(
                     Self::calculate_window_size(self.width, self.height)
                 )).clicked() {
-
-                    let mut file_name: String = String::new();
-                    let mut should_create: bool = false;
-                    let mut open_dialog: bool = true;
-
-                    egui::Window::new("Create File").show(ui.ctx(), |ui: &mut egui::Ui| {
-                        ui.horizontal(|ui: &mut egui::Ui| {
-                            ui.label("File Name:");
-                            ui.text_edit_singleline(&mut file_name);
-                        });
-
-                        ui.horizontal(|ui: &mut egui::Ui| {
-                            if ui.button("Cancel").clicked() {
-                                open_dialog = false;
-                            }
-
-                            ui.separator();
-
-                            if ui.button("Create").clicked() {
-                                should_create = true;
-                                open_dialog = false;
-                            }
-                        });
-                    });
-
-                    if should_create {
-                        let mut path: PathBuf = self.path.clone();
-                        path.push(&file_name);
-                        std::fs::File::create(path).unwrap();
-                    }
-
-                    if !open_dialog {
-                        file_name.clear();
-                    }
+                    self.create_file_dialog = true;
                 }
             });
 
@@ -302,6 +244,66 @@ impl FileExplorer {
                 }
             });
         });
+
+        let mut create_folder_dialog = self.create_folder_dialog;
+        if create_folder_dialog {
+            egui::Window::new("Create Folder")
+                .open(&mut create_folder_dialog)
+                .show(ui.ctx(), |ui: &mut egui::Ui| {
+                    ui.horizontal(|ui: &mut egui::Ui| {
+                        ui.label("Folder Name:");
+                        ui.text_edit_singleline(&mut self.folder_name);
+                    });
+
+                    ui.horizontal(|ui: &mut egui::Ui| {
+                        if ui.button("Cancel").clicked() {
+                            self.create_folder_dialog = false;
+                        }
+
+                        ui.separator();
+
+                        if ui.button("Create").clicked() {
+                            if !self.folder_name.is_empty() {
+                                let mut path = self.path.clone();
+                                path.push(&self.folder_name);
+                                std::fs::create_dir(path).unwrap();
+                                self.folder_name.clear();
+                                self.create_folder_dialog = false;
+                            }
+                        }
+                    });
+                });
+        }
+
+        let mut create_folder_dialog = self.create_folder_dialog;
+        if create_folder_dialog {
+            egui::Window::new("Create File")
+                .open(&mut create_folder_dialog)
+                .show(ui.ctx(), |ui: &mut egui::Ui| {
+                    ui.horizontal(|ui: &mut egui::Ui| {
+                        ui.label("File Name:");
+                        ui.text_edit_singleline(&mut self.file_name);
+                    });
+
+                    ui.horizontal(|ui: &mut egui::Ui| {
+                        if ui.button("Cancel").clicked() {
+                            self.create_file_dialog = false;
+                        }
+
+                        ui.separator();
+
+                        if ui.button("Create").clicked() {
+                            if !self.file_name.is_empty() {
+                                let mut path = self.path.clone();
+                                path.push(&self.file_name);
+                                std::fs::File::create(path).unwrap();
+                                self.file_name.clear();
+                                self.create_file_dialog = false;
+                            }
+                        }
+                    });
+                });
+        }
     }
 }
 
