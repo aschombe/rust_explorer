@@ -85,8 +85,9 @@ impl FileExplorer {
         self.width = ui.available_width();
         self.height = ui.available_height();
 
-        egui::ScrollArea::vertical().show(ui, |ui: &mut egui::Ui| {
-            // size proportional to the height and width of the window
+        egui::ScrollArea::vertical()
+        .drag_to_scroll(false)
+        .show(ui, |ui: &mut egui::Ui| {
             ui.label(egui::RichText::new(format!("Current Path: {}", self.path.to_str().unwrap())).size(
                 Self::calculate_window_size(self.width, self.height)
             ));
