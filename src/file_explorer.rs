@@ -6,8 +6,9 @@ use std::{
     sync::{Arc, Mutex},
     thread,
 };
-use winapi;
 use home;
+
+mod utils;
 
 pub struct FileExplorer {
     width: f32,
@@ -53,34 +54,6 @@ impl FileExplorer {
         }
     }
 
-    pub fn calculate_directory_size(path: PathBuf, cache: Arc<Mutex<std::collections::HashMap<PathBuf, u64>>>) {
-        let mut total_size: u64 = 0;
-        let mut stack: Vec<PathBuf> = vec![path.clone()];
-        while let Some(dir) = stack.pop() {
-            if let Ok(entries) = std::fs::read_dir(&dir) {
-                for entry in entries.flatten() {
-                    let entry_path: PathBuf = entry.path();
-                    let size: u64 = entry.metadata().map(|m: std::fs::Metadata| m.len()).unwrap_or(0);
-                    total_size += size;
-                    if entry_path.is_dir() {
-                        stack.push(entry_path);
-                    }
-                }
-            }
-        }
-
-        cache.lock().unwrap().insert(path, total_size);
-    }
-
-    fn calculate_window_size(width: f32, height: f32) -> f32 {
-        match
-            (width + height) / 90.0 // if the window is square
-            {
-                size if size < 20.0 => 20.0, // if the size is less than 20, set it to 20
-                size => size, // otherwise, use the calculated size
-            }
-    }
-
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         self.width = ui.available_width();
         self.height = ui.available_height();
@@ -89,13 +62,13 @@ impl FileExplorer {
         .drag_to_scroll(false)
         .show(ui, |ui: &mut egui::Ui| {
             ui.label(egui::RichText::new(format!("Current Path: {}", self.path.to_str().unwrap())).size(
-                Self::calculate_window_size(self.width, self.height)
+                utils::calculate_window_size(self.width, self.height)
             ));
             ui.separator();
 
             ui.horizontal(|ui: &mut egui::Ui| {
                 if ui.button(egui::RichText::new("Back").size(
-                    Self::calculate_window_size(self.width, self.height)
+                    utils::calculate_window_size(self.width, self.height)
                 )).clicked() {
                     self.path.pop();
                 }
@@ -103,7 +76,7 @@ impl FileExplorer {
                 ui.separator();
 
                 if ui.button(egui::RichText::new("Home").size(
-                    Self::calculate_window_size(self.width, self.height)
+                    utils::calculate_window_size(self.width, self.height)
                 )).clicked() {
                     self.path = match home::home_dir() { Some(path) => path, None => PathBuf::new() };
                 }
@@ -111,7 +84,7 @@ impl FileExplorer {
                 ui.separator();
 
                 if ui.button(egui::RichText::new("Create Folder").size(
-                    Self::calculate_window_size(self.width, self.height)
+                    utils::calculate_window_size(self.width, self.height)
                 )).clicked() {
                     self.create_folder_dialog = true;
                 }
@@ -119,7 +92,7 @@ impl FileExplorer {
                 ui.separator();
 
                 if ui.button(egui::RichText::new("Create File").size(
-                    Self::calculate_window_size(self.width, self.height)
+                    utils::calculate_window_size(self.width, self.height)
                 )).clicked() {
                     self.create_file_dialog = true;
                 }
@@ -129,15 +102,15 @@ impl FileExplorer {
 
             ui.horizontal(|ui: &mut egui::Ui| {
                 ui.label(egui::RichText::new("Name").size(
-                    Self::calculate_window_size(self.width, self.height)
+                    utils::calculate_window_size(self.width, self.height)
                 ));
                 ui.separator();
                 ui.label(egui::RichText::new("Size").size(
-                    Self::calculate_window_size(self.width, self.height)
+                    utils::calculate_window_size(self.width, self.height)
                 ));
                 ui.separator();
                 ui.label(egui::RichText::new("Type").size(
-                    Self::calculate_window_size(self.width, self.height)
+                    utils::calculate_window_size(self.width, self.height)
                 ));
             });
 
@@ -149,24 +122,26 @@ impl FileExplorer {
                     let entry: std::fs::DirEntry = entry.unwrap();
                     let path: PathBuf = entry.path();
                     let name: &str = path.file_name().unwrap().to_str().unwrap();
-
-                    let cache: Arc<Mutex<std::collections::HashMap<PathBuf, u64>>> = self.size_cache.clone();
+                    
                     let size: u64 = *self.size_cache.lock().unwrap().entry(path.clone()).or_insert_with(|| {
-                        let cache: Arc<Mutex<std::collections::HashMap<PathBuf, u64>>> = cache.clone();
                         let path_clone: PathBuf = path.clone();
                         thread::spawn(move || {
-                            Self::calculate_directory_size(path_clone, cache);
+                            utils::calculate_directory_size(path_clone)
                         });
                         0
                     });
-                    
+
+                    if size != 0 {
+                        self.size_cache.lock().unwrap().insert(path.clone(), size);
+                    }
+
                     let path_clone: PathBuf = path.clone();
                     let is_dir: bool = entry.metadata().unwrap().is_dir();
                     let file_type_str: &str = if is_dir { "Directory" } else { "File" };
                     ui.horizontal(|ui: &mut egui::Ui| {
                         if is_dir {
                             if ui.button(egui::RichText::new(name).size(
-                                Self::calculate_window_size(self.width, self.height)
+                                utils::calculate_window_size(self.width, self.height)
                             )).clicked() {
                                 if let Ok(_entries) = std::fs::read_dir(&path) {
                                     self.path = path_clone;
@@ -174,72 +149,18 @@ impl FileExplorer {
                             }
                         } else {
                             let mut button: egui::Button = egui::Button::new(egui::RichText::new(name).size(
-                                Self::calculate_window_size(self.width, self.height)
+                                utils::calculate_window_size(self.width, self.height)
                             ));
                             button = button.frame(false);
                             if ui.add(button).clicked() {
-                                #[cfg(target_os = "windows")]
-                                {
-                                    // use winapi to open the default program for the file
-                                    let path_str: &str = path_clone.to_str().unwrap();
-                                    let path_str: std::ffi::CString = std::ffi::CString::new(path_str).unwrap();
-                                    unsafe {
-                                        winapi::um::shellapi::ShellExecuteA(
-                                            std::ptr::null_mut(),
-                                            std::ptr::null_mut(),
-                                            path_str.as_ptr(),
-                                            std::ptr::null(),
-                                            std::ptr::null(),
-                                            winapi::um::winuser::SW_SHOWNORMAL,
-                                        );
-                                    }
-                                }
-                                // try to open the file with their default program using xdg-open, 
-                                // otherwise use the default editor, or nano if the default editor is not set
-                                #[cfg(not(target_os = "windows"))]
-                                {
-                                    // let editor = std::env::var("EDITOR").unwrap_or("nano".to_string());
-                                    // std::process::Command::new(editor)
-                                    //     .arg(path_clone)
-                                    //     .spawn()
-                                    //     .unwrap();
-                    
-                                    let path_str = path_clone.to_str().unwrap();
-                                    let path_str = std::ffi::CString::new(path_str).unwrap();
-                                    if let Err(_) = std::process::Command::new("xdg-open")
-                                        .arg(path_str)
-                                        .spawn()
-                                    {
-                                        let editor = std::env::var("EDITOR").unwrap_or("nano".to_string());
-                                        std::process::Command::new(editor)
-                                            .arg(path_clone)
-                                            .spawn()
-                                            .unwrap();
-                                    }
-                                }
+                                utils::open_file(path_clone);
                             }
                         }
 
-                        match size {
-                            0..=999 => ui.label(egui::RichText::new(format!("{} B", size)).size(
-                                Self::calculate_window_size(self.width, self.height)
-                            )),
-                            1000..=999_999 => ui.label(egui::RichText::new(format!("{:.2} KB", size as f64 / 1000.0)).size(
-                                Self::calculate_window_size(self.width, self.height)
-                            )),
-                            1_000_000..=999_999_999 => ui.label(egui::RichText::new(format!("{:.2} MB", size as f64 / 1_000_000.0)).size(
-                                Self::calculate_window_size(self.width, self.height)
-                            )),
-                            1_000_000_000..=999_999_999_999 => ui.label(egui::RichText::new(format!("{:.2} GB", size as f64 / 1_000_000_000.0)).size(
-                                Self::calculate_window_size(self.width, self.height)
-                            )),
-                            _ => ui.label(egui::RichText::new(format!("{:.2} TB", size as f64 / 1_000_000_000_000.0)).size(
-                                Self::calculate_window_size(self.width, self.height)
-                            )),
-                        };
+                        utils::format_sizes(size, ui, self.width, self.height);
 
                         ui.label(egui::RichText::new(file_type_str).size(
-                            Self::calculate_window_size(self.width, self.height)
+                            utils::calculate_window_size(self.width, self.height)
                         ));
                     });
                 }
