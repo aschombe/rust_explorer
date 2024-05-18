@@ -8,5 +8,4 @@ fn main() {
         options,
         Box::new(|_cc| Box::new(file_explorer::FileExplorer::default())),
     );
-}   
-
+}
