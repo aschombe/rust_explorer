@@ -5,20 +5,21 @@ use std::{
     // fs,
     // thread,
     path::PathBuf,
-    // sync::{Arc, Mutex},
+    // collections::HashMap,
+    // sync::{Arc, Mutex, MutexGuard},
 };
 use home;
-
+// use fs_extra;
 
 pub struct FileExplorer {
     width: f32,
     height: f32,
     path: PathBuf,
-    // size_cache: Arc<Mutex<std::collections::HashMap<PathBuf, u64>>>,
     create_folder_dialog: bool,
     create_file_dialog: bool,
     folder_name: String,
     file_name: String,
+    // sizes: Arc<Mutex<HashMap<PathBuf, u64>>>,
 }
 
 impl Default for FileExplorer {
@@ -32,29 +33,16 @@ impl FileExplorer {
         Self {
             width: 0.0,
             height: 0.0,
-            // set path to the home directory for the current user, windows and unix
             path: (match home::home_dir() { Some(path) => path, None => PathBuf::new() }),
-            // if it exists, load it, otherwise create a new one (gets saved on exit)
-            // size_cache: (match home::home_dir() {
-            //     Some(mut path) => {
-            //         path.push(".rust_explorer_cache");
-            //         if let Ok(cache) = std::fs::read(path) {
-            //             let cache: std::collections::HashMap<PathBuf, u64> = bincode::deserialize(&cache).unwrap();
-            //             Arc::new(Mutex::new(cache))
-            //         } else {
-            //             Arc::new(Mutex::new(std::collections::HashMap::new()))
-            //         }
-            //     },
-            //     None => Arc::new(Mutex::new(std::collections::HashMap::new())),
-            // }),
             create_folder_dialog: false,
             create_file_dialog: false,
             folder_name: String::new(),
             file_name: String::new(),
+            // sizes: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
-    pub fn calculate_window_size(width: f32, height: f32) -> f32 {
+    fn calculate_window_size(width: f32, height: f32) -> f32 {
         match
             (width + height) / 90.0 // if the window is square
             {
@@ -63,38 +51,52 @@ impl FileExplorer {
             }
     }
 
-    // pub fn calculate_directory_size(path: PathBuf) -> u64 {
-    //     let mut total_size: u64 = 0;
-    //     let mut stack: Vec<PathBuf> = vec![path.clone()];
-    //     while let Some(dir) = stack.pop() {
-    //         if let Ok(entries) = fs::read_dir(&dir) {
-    //             for entry in entries.flatten() {
-    //                 let entry_path: PathBuf = entry.path();
-    //                 let size: u64 = entry.metadata().map(|m: fs::Metadata| m.len()).unwrap_or(0);
-    //                 total_size += size;
-    //                 if entry_path.is_dir() {
-    //                     stack.push(entry_path);
-    //                 }
-    //             }
-    //         }
+    // fn get_size(&self, path: PathBuf, is_dir: bool, entry: &fs::DirEntry) -> u64 {
+    //     let sizes: Arc<Mutex<HashMap<PathBuf, u64>>> = Arc::clone(&self.sizes);
+    //     let size_option: Option<u64> = {
+    //         let sizes_lock: MutexGuard<HashMap<PathBuf, u64>> = sizes.lock().unwrap();
+    //         sizes_lock.get(&path).cloned()
+    //     };
+
+    //     if let Some(size) = size_option {
+    //         size
+    //     } else {
+    //         let sizes: Arc<Mutex<HashMap<PathBuf, u64>>> = Arc::clone(&self.sizes);
+    //         let path_clone: PathBuf = path.clone();
+    //         let entry_metadata: fs::Metadata = entry.metadata().unwrap();
+
+    //         let handle: thread::JoinHandle<u64> = thread::spawn(move || {
+    //             let size: u64 = if is_dir {
+    //                 let size: u64 = match fs_extra::dir::get_size(&path_clone) {
+    //                     Ok(size) => size,
+    //                     Err(_) => 0,
+    //                 };
+    //                 let mut sizes: MutexGuard<HashMap<PathBuf, u64>> = sizes.lock().unwrap();
+    //                 sizes.insert(path_clone, size);
+    //                 size
+    //             } else {
+    //                 entry_metadata.len()
+    //             };
+    //             size
+    //         });
+
+    //         handle.join().unwrap()
     //     }
-    
-    //     total_size
     // }
 
+    
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         self.width = ui.available_width();
         self.height = ui.available_height();
+        let mut selected_file: PathBuf = PathBuf::new();
 
-        egui::ScrollArea::vertical()
-        .drag_to_scroll(false)
-        .show(ui, |ui: &mut egui::Ui| {
-            ui.label(egui::RichText::new(format!("Current Path: {}", self.path.to_str().unwrap())).size(
-                Self::calculate_window_size(self.width, self.height)
-            ));
-            ui.separator();
+        egui::TopBottomPanel::top("top_panel").show_inside(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new(format!("Current Path: {}", self.path.to_str().unwrap())).size(
+                    Self::calculate_window_size(self.width, self.height)
+                ));
+                ui.separator();
 
-            ui.horizontal(|ui: &mut egui::Ui| {
                 if ui.button(egui::RichText::new("Back").size(
                     Self::calculate_window_size(self.width, self.height)
                 )).clicked() {
@@ -124,134 +126,337 @@ impl FileExplorer {
                 )).clicked() {
                     self.create_file_dialog = true;
                 }
-            });
 
-            ui.separator();
-
-            ui.horizontal(|ui: &mut egui::Ui| {
-                ui.label(egui::RichText::new("Name").size(
-                    Self::calculate_window_size(self.width, self.height)
-                ));
                 ui.separator();
-                ui.label(egui::RichText::new("Size").size(
+
+                if ui.button(egui::RichText::new("Delete Folder").size(
                     Self::calculate_window_size(self.width, self.height)
-                ));
+                )).clicked() {
+                    println!("Delete Folder");
+                }
+
                 ui.separator();
-                ui.label(egui::RichText::new("Type").size(
+
+                if ui.button(egui::RichText::new("Delete File").size(
                     Self::calculate_window_size(self.width, self.height)
-                ));
-            });
-
-            ui.separator();
-            
-            ui.vertical(|ui: &mut egui::Ui| {
-                let entries: std::fs::ReadDir = std::fs::read_dir(&self.path).unwrap();
-                for entry in entries {
-                    let entry: std::fs::DirEntry = entry.unwrap();
-                    let path: PathBuf = entry.path();
-                    let name: &str = path.file_name().unwrap().to_str().unwrap();
-                    
-                    // let size: u64 = *self.size_cache.lock().unwrap().entry(path.clone()).or_insert_with(|| {
-                    //     let path_clone: PathBuf = path.clone();
-                    //     thread::spawn(move || {
-                    //         Self::calculate_directory_size(path_clone)
-                    //     });
-                    //     0
-                    // });
-
-                    // if size != 0 {
-                    //     self.size_cache.lock().unwrap().insert(path.clone(), size);
-                    // }
-
-                    let size: u64 = 0;
-
-                    let path_clone: PathBuf = path.clone();
-                    let is_dir: bool = entry.metadata().unwrap().is_dir();
-                    let file_type_str: &str = if is_dir { "Directory" } else { "File" };
-                    ui.horizontal(|ui: &mut egui::Ui| {
-                        if is_dir {
-                            if ui.button(egui::RichText::new(name).size(
-                                Self::calculate_window_size(self.width, self.height)
-                            )).clicked() {
-                                if let Ok(_entries) = std::fs::read_dir(&path) {
-                                    self.path = path_clone;
-                                }
-                            }
-                        } else {
-                            let mut button: egui::Button = egui::Button::new(egui::RichText::new(name).size(
-                                Self::calculate_window_size(self.width, self.height)
-                            ));
-                            button = button.frame(false);
-                            if ui.add(button).clicked() {
-                                #[cfg(target_os = "windows")]
-                                {
-                                    // use winapi to open the default program for the file
-                                    let path_str: &str = path_clone.to_str().unwrap();
-                                    let path_str: std::ffi::CString = std::ffi::CString::new(path_str).unwrap();
-                                    unsafe {
-                                        winapi::um::shellapi::ShellExecuteA(
-                                            std::ptr::null_mut(),
-                                            std::ptr::null_mut(),
-                                            path_str.as_ptr(),
-                                            std::ptr::null(),
-                                            std::ptr::null(),
-                                            winapi::um::winuser::SW_SHOWNORMAL,
-                                        );
-                                    }
-                                }
-                                // try to open the file with their default program using xdg-open, 
-                                // otherwise use the default editor, or nano if the default editor is not set
-                                #[cfg(not(target_os = "windows"))]
-                                {
-                                    // let editor = std::env::var("EDITOR").unwrap_or("nano".to_string());
-                                    // std::process::Command::new(editor)
-                                    //     .arg(path_clone)
-                                    //     .spawn()
-                                    //     .unwrap();
-                                    
-                                    // mimeapps.list
-                            
-                                    let path_str = path_clone.to_str().unwrap();
-                                    let path_str = std::ffi::CString::new(path_str).unwrap();
-                                    if let Err(_) = std::process::Command::new("xdg-open")
-                                        .arg(path_str)
-                                        .spawn()
-                                    {
-                                        let editor = std::env::var("EDITOR").unwrap_or("nano".to_string());
-                                        std::process::Command::new(editor)
-                                            .arg(path_clone)
-                                            .spawn()
-                                            .unwrap();
-                                    }
-                                }
-                            }
-                        }
-
-                        match size {
-                            0..=999 => ui.label(egui::RichText::new(format!("{} B", size)).size(
-                                Self::calculate_window_size(self.width, self.height)
-                            )),
-                            1000..=999_999 => ui.label(egui::RichText::new(format!("{:.2} KB", size as f64 / 1000.0)).size(
-                                Self::calculate_window_size(self.width, self.height)
-                            )),
-                            1_000_000..=999_999_999 => ui.label(egui::RichText::new(format!("{:.2} MB", size as f64 / 1_000_000.0)).size(
-                                Self::calculate_window_size(self.width, self.height)
-                            )),
-                            1_000_000_000..=999_999_999_999 => ui.label(egui::RichText::new(format!("{:.2} GB", size as f64 / 1_000_000_000.0)).size(
-                                Self::calculate_window_size(self.width, self.height)
-                            )),
-                            _ => ui.label(egui::RichText::new(format!("{:.2} TB", size as f64 / 1_000_000_000_000.0)).size(
-                                Self::calculate_window_size(self.width, self.height)
-                            )),
-                        };
-
-                        ui.label(egui::RichText::new(file_type_str).size(
-                            Self::calculate_window_size(self.width, self.height)
-                        ));
-                    });
+                )).clicked() {
+                    println!("Delete File");
                 }
             });
         });
+
+        egui::CentralPanel::default().show_inside(ui, |ui| {
+            egui::ScrollArea::vertical()
+            .drag_to_scroll(false)
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new("Name").size(
+                        Self::calculate_window_size(self.width, self.height)
+                    ));
+                    ui.separator();
+                    ui.label(egui::RichText::new("Size").size(
+                        Self::calculate_window_size(self.width, self.height)
+                    ));
+                    ui.separator();
+                    ui.label(egui::RichText::new("Type").size(
+                        Self::calculate_window_size(self.width, self.height)
+                    ));
+                });
+
+                ui.separator();
+                
+                ui.vertical(|ui| {
+                    let entries: std::fs::ReadDir = std::fs::read_dir(&self.path).unwrap();
+                    for entry in entries {
+                        let entry: std::fs::DirEntry = entry.unwrap();
+                        let path: PathBuf = entry.path();
+                        let name: &str = path.file_name().unwrap().to_str().unwrap();
+
+                        let path_clone: PathBuf = path.clone();
+                        let is_dir: bool = entry.metadata().unwrap().is_dir();
+
+                        // let size: u64 = self.get_size(path.clone(), is_dir, &entry);   
+                        let size: u64 = 0;                 
+
+                        let file_type_str: &str = if is_dir { "Directory" } else { "File" };
+                        ui.horizontal(|ui| {
+                            if is_dir {
+                                let response: egui::Response = ui.button(egui::RichText::new(name).size(
+                                    Self::calculate_window_size(self.width, self.height)
+                                )).interact(egui::Sense::click());
+                                if response.clicked_by(egui::PointerButton::Primary) {
+                                    if let Ok(_entries) = std::fs::read_dir(&path) {
+                                        self.path = path_clone;
+                                    }
+                                } else if response.clicked_by(egui::PointerButton::Secondary) {
+                                    selected_file = path_clone;
+                                    println!("Selected: {:?}", selected_file);
+                                }
+                            } else {
+                                let mut button: egui::Button = egui::Button::new(egui::RichText::new(name).size(
+                                    Self::calculate_window_size(self.width, self.height)
+                                ));
+                                button = button.frame(false);
+                                let response: egui::Response = ui.add(button);
+
+                                if response.clicked_by(egui::PointerButton::Primary) {
+                                    #[cfg(target_os = "windows")]
+                                    {
+                                        // use winapi to open the default program for the file
+                                        let path_str: &str = path_clone.to_str().unwrap();
+                                        let path_str: std::ffi::CString = std::ffi::CString::new(path_str).unwrap();
+                                        unsafe {
+                                            winapi::um::shellapi::ShellExecuteA(
+                                                std::ptr::null_mut(),
+                                                std::ptr::null_mut(),
+                                                path_str.as_ptr(),
+                                                std::ptr::null(),
+                                                std::ptr::null(),
+                                                winapi::um::winuser::SW_SHOWNORMAL,
+                                            );
+                                        }
+                                    }
+                                    // try to open the file with their default program using xdg-open,
+                                    // otherwise use the default editor, or nano if the default editor is not set
+                                    #[cfg(not(target_os = "windows"))]
+                                    {
+                                        // let editor = std::env::var("EDITOR").unwrap_or("nano".to_string());
+                                        // std::process::Command::new(editor)
+                                        //     .arg(path_clone)
+                                        //     .spawn()
+                                        //     .unwrap();
+
+                                        // mimeapps.list
+
+                                        let path_str = path_clone.to_str().unwrap();
+                                        let path_str = std::ffi::CString::new(path_str).unwrap();
+                                        if let Err(_) = std::process::Command::new("xdg-open")
+                                            .arg(path_str)
+                                            .spawn()
+                                        {
+                                            let editor = std::env::var("EDITOR").unwrap_or("nano".to_string());
+                                            std::process::Command::new(editor)
+                                                .arg(path_clone)
+                                                .spawn()
+                                                .unwrap();
+                                        }
+                                    }
+                                } else if response.clicked_by(egui::PointerButton::Secondary) {
+                                    selected_file = path_clone;
+                                    println!("Selected: {:?}", selected_file);
+                                }
+                            }
+                            
+                            match size {
+                                0..=999 => ui.label(egui::RichText::new(format!("{} B", size)).size(
+                                    Self::calculate_window_size(self.width, self.height)
+                                )),
+                                1000..=999_999 => ui.label(egui::RichText::new(format!("{:.2} KB", size as f64 / 1000.0)).size(
+                                    Self::calculate_window_size(self.width, self.height)
+                                )),
+                                1_000_000..=999_999_999 => ui.label(egui::RichText::new(format!("{:.2} MB", size as f64 / 1_000_000.0)).size(
+                                    Self::calculate_window_size(self.width, self.height)
+                                )),
+                                1_000_000_000..=999_999_999_999 => ui.label(egui::RichText::new(format!("{:.2} GB", size as f64 / 1_000_000_000.0)).size(
+                                    Self::calculate_window_size(self.width, self.height)
+                                )),
+                                _ => ui.label(egui::RichText::new(format!("{:.2} TB", size as f64 / 1_000_000_000_000.0)).size(
+                                    Self::calculate_window_size(self.width, self.height)
+                                )),
+                            };
+                            
+                            ui.label(egui::RichText::new(file_type_str).size(
+                                Self::calculate_window_size(self.width, self.height)
+                            ));
+                        });
+                    }
+                });
+            });
+        });
+            
+
+        // egui::ScrollArea::vertical()
+        // .drag_to_scroll(false)
+        // .show(ui, |ui: &mut egui::Ui| {
+        //     ui.label(egui::RichText::new(format!("Current Path: {}", self.path.to_str().unwrap())).size(
+        //         Self::calculate_window_size(self.width, self.height)
+        //     ));
+        //     ui.separator();
+
+        //     ui.horizontal(|ui: &mut egui::Ui| {
+        //         if ui.button(egui::RichText::new("Back").size(
+        //             Self::calculate_window_size(self.width, self.height)
+        //         )).clicked() {
+        //             self.path.pop();
+        //         }
+
+        //         ui.separator();
+
+        //         if ui.button(egui::RichText::new("Home").size(
+        //             Self::calculate_window_size(self.width, self.height)
+        //         )).clicked() {
+        //             self.path = match home::home_dir() { Some(path) => path, None => PathBuf::new() };
+        //         }
+
+        //         ui.separator();
+
+        //         if ui.button(egui::RichText::new("Create Folder").size(
+        //             Self::calculate_window_size(self.width, self.height)
+        //         )).clicked() {
+        //             self.create_folder_dialog = true;
+        //         }
+
+        //         ui.separator();
+
+        //         if ui.button(egui::RichText::new("Create File").size(
+        //             Self::calculate_window_size(self.width, self.height)
+        //         )).clicked() {
+        //             self.create_file_dialog = true;
+        //         }
+
+        //         ui.separator();
+
+        //         if ui.button(egui::RichText::new("Delete Folder").size(
+        //             Self::calculate_window_size(self.width, self.height)
+        //         )).clicked() {
+        //             println!("Delete Folder");
+        //         }
+
+        //         ui.separator();
+
+        //         if ui.button(egui::RichText::new("Delete File").size(
+        //             Self::calculate_window_size(self.width, self.height)
+        //         )).clicked() {
+        //             println!("Delete File");
+        //         }
+        //     });
+
+        //     ui.separator();
+
+        //     ui.horizontal(|ui: &mut egui::Ui| {
+        //         ui.label(egui::RichText::new("Name").size(
+        //             Self::calculate_window_size(self.width, self.height)
+        //         ));
+        //         ui.separator();
+        //         ui.label(egui::RichText::new("Size").size(
+        //             Self::calculate_window_size(self.width, self.height)
+        //         ));
+        //         ui.separator();
+        //         ui.label(egui::RichText::new("Type").size(
+        //             Self::calculate_window_size(self.width, self.height)
+        //         ));
+        //     });
+
+        //     ui.separator();
+            
+        //     ui.vertical(|ui: &mut egui::Ui| {
+        //         let entries: std::fs::ReadDir = std::fs::read_dir(&self.path).unwrap();
+        //         for entry in entries {
+        //             let entry: std::fs::DirEntry = entry.unwrap();
+        //             let path: PathBuf = entry.path();
+        //             let name: &str = path.file_name().unwrap().to_str().unwrap();
+
+        //             let path_clone: PathBuf = path.clone();
+        //             let is_dir: bool = entry.metadata().unwrap().is_dir();
+
+        //             // let size: u64 = self.get_size(path.clone(), is_dir, &entry);   
+        //             let size: u64 = 0;                 
+
+        //             let file_type_str: &str = if is_dir { "Directory" } else { "File" };
+        //             ui.horizontal(|ui: &mut egui::Ui| {
+        //                 if is_dir {
+        //                     let response: egui::Response = ui.button(egui::RichText::new(name).size(
+        //                         Self::calculate_window_size(self.width, self.height)
+        //                     )).interact(egui::Sense::click());
+        //                     if response.clicked_by(egui::PointerButton::Primary) {
+        //                         if let Ok(_entries) = std::fs::read_dir(&path) {
+        //                             self.path = path_clone;
+        //                         }
+        //                     } else if response.clicked_by(egui::PointerButton::Secondary) {
+        //                         selected_file = path_clone;
+        //                         println!("Selected: {:?}", selected_file);
+        //                     }
+        //                 } else {
+        //                     let mut button: egui::Button = egui::Button::new(egui::RichText::new(name).size(
+        //                         Self::calculate_window_size(self.width, self.height)
+        //                     ));
+        //                     button = button.frame(false);
+        //                     let response: egui::Response = ui.add(button);
+
+        //                     if response.clicked_by(egui::PointerButton::Primary) {
+        //                         #[cfg(target_os = "windows")]
+        //                         {
+        //                             // use winapi to open the default program for the file
+        //                             let path_str: &str = path_clone.to_str().unwrap();
+        //                             let path_str: std::ffi::CString = std::ffi::CString::new(path_str).unwrap();
+        //                             unsafe {
+        //                                 winapi::um::shellapi::ShellExecuteA(
+        //                                     std::ptr::null_mut(),
+        //                                     std::ptr::null_mut(),
+        //                                     path_str.as_ptr(),
+        //                                     std::ptr::null(),
+        //                                     std::ptr::null(),
+        //                                     winapi::um::winuser::SW_SHOWNORMAL,
+        //                                 );
+        //                             }
+        //                         }
+        //                         // try to open the file with their default program using xdg-open,
+        //                         // otherwise use the default editor, or nano if the default editor is not set
+        //                         #[cfg(not(target_os = "windows"))]
+        //                         {
+        //                             // let editor = std::env::var("EDITOR").unwrap_or("nano".to_string());
+        //                             // std::process::Command::new(editor)
+        //                             //     .arg(path_clone)
+        //                             //     .spawn()
+        //                             //     .unwrap();
+
+        //                             // mimeapps.list
+
+        //                             let path_str = path_clone.to_str().unwrap();
+        //                             let path_str = std::ffi::CString::new(path_str).unwrap();
+        //                             if let Err(_) = std::process::Command::new("xdg-open")
+        //                                 .arg(path_str)
+        //                                 .spawn()
+        //                             {
+        //                                 let editor = std::env::var("EDITOR").unwrap_or("nano".to_string());
+        //                                 std::process::Command::new(editor)
+        //                                     .arg(path_clone)
+        //                                     .spawn()
+        //                                     .unwrap();
+        //                             }
+        //                         }
+        //                     } else if response.clicked_by(egui::PointerButton::Secondary) {
+        //                         selected_file = path_clone;
+        //                         println!("Selected: {:?}", selected_file);
+        //                     }
+        //                 }
+
+
+        //                 match size {
+        //                     0..=999 => ui.label(egui::RichText::new(format!("{} B", size)).size(
+        //                         Self::calculate_window_size(self.width, self.height)
+        //                     )),
+        //                     1000..=999_999 => ui.label(egui::RichText::new(format!("{:.2} KB", size as f64 / 1000.0)).size(
+        //                         Self::calculate_window_size(self.width, self.height)
+        //                     )),
+        //                     1_000_000..=999_999_999 => ui.label(egui::RichText::new(format!("{:.2} MB", size as f64 / 1_000_000.0)).size(
+        //                         Self::calculate_window_size(self.width, self.height)
+        //                     )),
+        //                     1_000_000_000..=999_999_999_999 => ui.label(egui::RichText::new(format!("{:.2} GB", size as f64 / 1_000_000_000.0)).size(
+        //                         Self::calculate_window_size(self.width, self.height)
+        //                     )),
+        //                     _ => ui.label(egui::RichText::new(format!("{:.2} TB", size as f64 / 1_000_000_000_000.0)).size(
+        //                         Self::calculate_window_size(self.width, self.height)
+        //                     )),
+        //                 };
+
+        //                 ui.label(egui::RichText::new(file_type_str).size(
+        //                     Self::calculate_window_size(self.width, self.height)
+        //                 ));
+        //             });
+        //         }
+        //     });
+        // });
 
         let mut create_folder_dialog = self.create_folder_dialog;
         if create_folder_dialog {
@@ -327,6 +532,6 @@ impl App for FileExplorer {
     //     let cache: Vec<u8> = bincode::serialize(&*cache).unwrap();
     //     let mut path: PathBuf = home::home_dir().unwrap();
     //     path.push(".rust_explorer_cache");
-    //     std::fs::write(path, cache).unwrap();
+    //     fs::write(path, cache).unwrap();
     // }
 }
