@@ -3,11 +3,13 @@ File size calculation causes program hang when first launching and changing dire
 Also some directory levels arent calculating their size properly. 
 -->
 
-<-- might not apply anymore
+<-- might not apply anymore - try to find better solution for finding file and directory sizes 
+(fs::extra::dir::get_size())
+(std::fs::metadata().len())
 Current implementation for hashmapping files and their sizes sizes doesn't allow for updating the hashmap when the file size changes.
 -->
 
-Fix button sizing and spacing (just fix formatting in general for sizing).
+Fix button sizing and spacing (just fix formatting in general for sizing). // especially for the operations panel
 Format the file explorer into columns, and give a length limit to the file name column.
 File and Folder dialog open at same time.
 File and Folder dialog x button doesnt work (remove the X button in favor of the close button).
