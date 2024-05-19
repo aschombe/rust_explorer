@@ -2,7 +2,7 @@
 
 use eframe::{egui, App};
 use std::{
-    // fs,
+    fs,
     // thread,
     path::PathBuf,
     // collections::HashMap,
@@ -166,9 +166,9 @@ impl FileExplorer {
                 ui.separator();
                 
                 ui.vertical(|ui| {
-                    let entries: std::fs::ReadDir = std::fs::read_dir(&self.path).unwrap();
+                    let entries: fs::ReadDir = fs::read_dir(&self.path).unwrap();
                     for entry in entries {
-                        let entry: std::fs::DirEntry = entry.unwrap();
+                        let entry: fs::DirEntry = entry.unwrap();
                         let path: PathBuf = entry.path();
                         let name: &str = path.file_name().unwrap().to_str().unwrap();
 
@@ -185,7 +185,7 @@ impl FileExplorer {
                                     Self::calculate_window_size(self.width, self.height)
                                 )).interact(egui::Sense::click());
                                 if response.clicked_by(egui::PointerButton::Primary) {
-                                    if let Ok(_entries) = std::fs::read_dir(&path) {
+                                    if let Ok(_entries) = fs::read_dir(&path) {
                                         self.path = path_clone;
                                     }
                                 } else if response.clicked_by(egui::PointerButton::Secondary) {
@@ -295,7 +295,7 @@ impl FileExplorer {
                             if !self.folder_name.is_empty() {
                                 let mut path = self.path.clone();
                                 path.push(&self.folder_name);
-                                std::fs::create_dir(path).unwrap();
+                                fs::create_dir(path).unwrap();
                                 self.folder_name.clear();
                                 self.create_folder_dialog = false;
                             }
@@ -325,7 +325,7 @@ impl FileExplorer {
                             if !self.file_name.is_empty() {
                                 let mut path = self.path.clone();
                                 path.push(&self.file_name);
-                                std::fs::File::create(path).unwrap();
+                                fs::File::create(path).unwrap();
                                 self.file_name.clear();
                                 self.create_file_dialog = false;
                             }
