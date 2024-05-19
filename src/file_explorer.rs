@@ -8,7 +8,7 @@ use std::{
     // collections::HashMap,
     // sync::{Arc, Mutex, MutexGuard},
 };
-use home;
+use home::home_dir;
 // use fs_extra;
 
 pub struct FileExplorer {
@@ -33,7 +33,7 @@ impl FileExplorer {
         Self {
             width: 0.0,
             height: 0.0,
-            path: (match home::home_dir() { Some(path) => path, None => PathBuf::new() }),
+            path: (match home_dir() { Some(path) => path, None => PathBuf::new() }),
             create_folder_dialog: false,
             create_file_dialog: false,
             folder_name: String::new(),
@@ -108,7 +108,7 @@ impl FileExplorer {
                 if ui.button(egui::RichText::new("Home").size(
                     Self::calculate_window_size(self.width, self.height)
                 )).clicked() {
-                    self.path = match home::home_dir() { Some(path) => path, None => PathBuf::new() };
+                    self.path = match home_dir() { Some(path) => path, None => PathBuf::new() };
                 }
 
                 ui.separator();
@@ -346,7 +346,7 @@ impl App for FileExplorer {
     // fn on_exit(&mut self, _ctx: Option<&eframe::glow::Context>) {
     //     let cache: std::sync::MutexGuard<std::collections::HashMap<PathBuf, u64>> = self.size_cache.lock().unwrap();
     //     let cache: Vec<u8> = bincode::serialize(&*cache).unwrap();
-    //     let mut path: PathBuf = home::home_dir().unwrap();
+    //     let mut path: PathBuf = home_dir().unwrap();
     //     path.push(".rust_explorer_cache");
     //     fs::write(path, cache).unwrap();
     // }
