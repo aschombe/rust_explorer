@@ -14,4 +14,4 @@ Format the file explorer into columns, and give a length limit to the file name 
 File and Folder dialog open at same time.
 File and Folder dialog x button doesnt work (remove the X button in favor of the close button).
 Check if file or folder exists before creating it, and if it does, prompt the user to overwrite it, don't instantly overwrite it.
-Create a delete file and folder dialog, and if they exist and the user has permission, prompt the user to delete it, don't instantly delete it.
+Cancel button doesnt close delete dialog.
