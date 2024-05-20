@@ -6,11 +6,7 @@ use std::{
     fs, 
     path::PathBuf,
     os::windows::fs::MetadataExt, 
-    // collections::HashMap,
-    // sync::{Arc, Mutex, MutexGuard},
 };
-
-// use fs_extra;
 
 pub struct FileExplorer {
     width: f32,
@@ -23,7 +19,6 @@ pub struct FileExplorer {
     folder_name: String,
     file_name: String,
     selected_file: Option<PathBuf>,
-    // sizes: Arc<Mutex<HashMap<PathBuf, u64>>>,
 }
 
 impl Default for FileExplorer {
@@ -45,7 +40,6 @@ impl FileExplorer {
             folder_name: String::new(),
             file_name: String::new(),
             selected_file: None,
-            // sizes: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -69,44 +63,10 @@ impl FileExplorer {
         }
     }
 
-    // fn get_size(&self, path: PathBuf, is_dir: bool, entry: &fs::DirEntry) -> u64 {
-    //     let sizes: Arc<Mutex<HashMap<PathBuf, u64>>> = Arc::clone(&self.sizes);
-    //     let size_option: Option<u64> = {
-    //         let sizes_lock: MutexGuard<HashMap<PathBuf, u64>> = sizes.lock().unwrap();
-    //         sizes_lock.get(&path).cloned()
-    //     };
-
-    //     if let Some(size) = size_option {
-    //         size
-    //     } else {
-    //         let sizes: Arc<Mutex<HashMap<PathBuf, u64>>> = Arc::clone(&self.sizes);
-    //         let path_clone: PathBuf = path.clone();
-    //         let entry_metadata: fs::Metadata = entry.metadata().unwrap();
-
-    //         let handle: thread::JoinHandle<u64> = thread::spawn(move || {
-    //             let size: u64 = if is_dir {
-    //                 let size: u64 = match fs_extra::dir::get_size(&path_clone) {
-    //                     Ok(size) => size,
-    //                     Err(_) => 0,
-    //                 };
-    //                 let mut sizes: MutexGuard<HashMap<PathBuf, u64>> = sizes.lock().unwrap();
-    //                 sizes.insert(path_clone, size);
-    //                 size
-    //             } else {
-    //                 entry_metadata.len()
-    //             };
-    //             size
-    //         });
-
-    //         handle.join().unwrap()
-    //     }
-    // }
-
-    
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         self.width = ui.available_width();
         self.height = ui.available_height();
-        println!("Showing Hidden Files: {}", self.show_hidden_files);
+
         egui::TopBottomPanel::top("top_panel").show_inside(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new(format!("Current Path: {}", self.path.to_str().unwrap())).size(
@@ -207,8 +167,7 @@ impl FileExplorer {
                         let path_clone: PathBuf = path.clone();
                         let is_dir: bool = entry.metadata().unwrap().is_dir();
 
-                        // let size: u64 = self.get_size(path.clone(), is_dir, &entry);   
-                        let size: u64 = 0;                 
+                        let size: u64 = entry.metadata().unwrap().len();
 
                         let file_type_str: &str = if is_dir { "Directory" } else { "File" };
                         ui.horizontal(|ui| {
@@ -409,12 +368,4 @@ impl App for FileExplorer {
             self.ui(ui);
         });
     }
-
-    // fn on_exit(&mut self, _ctx: Option<&eframe::glow::Context>) {
-    //     let cache: std::sync::MutexGuard<std::collections::HashMap<PathBuf, u64>> = self.size_cache.lock().unwrap();
-    //     let cache: Vec<u8> = bincode::serialize(&*cache).unwrap();
-    //     let mut path: PathBuf = home_dir().unwrap();
-    //     path.push(".rust_explorer_cache");
-    //     fs::write(path, cache).unwrap();
-    // }
 }
