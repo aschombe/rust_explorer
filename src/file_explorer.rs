@@ -58,28 +58,6 @@ impl FileExplorer {
             }
     }
 
-    // fn is_hidden(file_path: &PathBuf) -> Result<bool, std::io::Error> {
-    //     let metadata: fs::Metadata = fs::metadata(file_path)?;
-    //     let attributes = metadata.file_attributes();
-
-    //     if (attributes & 0x2) > 0 {
-    //         Ok(true)
-    //     } else {
-    //         Ok(false)
-    //     }
-    // }
-
-    // fn is_system(file_path: &PathBuf) -> Result<bool, std::io::Error> {
-    //     let metadata: fs::Metadata = fs::metadata(file_path)?;
-    //     let attributes = metadata.file_attributes();
-
-    //     if (attributes & 0x4) > 0 {
-    //         Ok(true)
-    //     } else {
-    //         Ok(false)
-    //     }
-    // }
-
     fn is_hidden_or_system(file_path: &PathBuf) -> Result<bool, std::io::Error> {
         let metadata: fs::Metadata = fs::metadata(file_path)?;
         let attributes = metadata.file_attributes();
@@ -90,17 +68,6 @@ impl FileExplorer {
             Ok(false)
         }
     }
-
-    // fn is_hidden_or_system(path: &PathBuf) -> bool {
-    //     let path_str: Vec<u16> = OsStr::new(path.to_str().unwrap()).encode_wide().chain(Some(0)).collect();
-    //     unsafe {
-    //         let attributes: u32 = GetFileAttributesW(path_str.as_ptr());
-    //         if attributes == u32::MAX {
-    //             return false; // If the function fails, assume the file is not hidden or system
-    //         }
-    //         (attributes & FILE_ATTRIBUTE_HIDDEN != 0) || (attributes & FILE_ATTRIBUTE_SYSTEM != 0)
-    //     }
-    // }
 
     // fn get_size(&self, path: PathBuf, is_dir: bool, entry: &fs::DirEntry) -> u64 {
     //     let sizes: Arc<Mutex<HashMap<PathBuf, u64>>> = Arc::clone(&self.sizes);
