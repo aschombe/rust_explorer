@@ -5,8 +5,10 @@ use home::home_dir;
 use std::{
     fs, 
     path::PathBuf,
-    os::windows::fs::MetadataExt, 
 };
+
+#[cfg(target_os = "windows")]
+use std::os::windows::fs::MetadataExt;
 
 pub struct FileExplorer {
     width: f32,
@@ -50,6 +52,37 @@ impl FileExplorer {
                 size if size < 20.0 => 20.0, // if the size is less than 20, set it to 20
                 size => size, // otherwise, use the calculated size
             }
+    }
+
+    fn get_dir_size(path: &PathBuf) -> u64 {
+        let mut total_size: u64 = 0;
+        let mut depth: u64 = 0;
+        let max_depth: u64 = 10;
+
+        fn get_dir_size(path: &PathBuf, total_size: &mut u64, depth: &mut u64, max_depth: u64) {
+            if *depth > max_depth {
+                return;
+            }
+
+            let entries: fs::ReadDir = fs::read_dir(path).unwrap();
+            for entry in entries {
+                let entry: fs::DirEntry = entry.unwrap();
+                let path: PathBuf = entry.path();
+                let metadata: fs::Metadata = entry.metadata().unwrap();
+
+                if metadata.is_dir() {
+                    *depth += 1;
+                    get_dir_size(&path, total_size, depth, max_depth);
+                    *depth -= 1;
+                } else {
+                    *total_size += metadata.len();
+                }
+            }
+        }
+
+        get_dir_size(path, &mut total_size, &mut depth, max_depth);
+
+        total_size
     }
 
     fn is_hidden_or_system(file_path: &PathBuf) -> Result<bool, std::io::Error> {
@@ -167,7 +200,12 @@ impl FileExplorer {
                         let path_clone: PathBuf = path.clone();
                         let is_dir: bool = entry.metadata().unwrap().is_dir();
 
-                        let size: u64 = entry.metadata().unwrap().len();
+                        // let size: u64 = entry.metadata().unwrap().len();
+                        let size: u64 = if is_dir {
+                            Self::get_dir_size(&path)
+                        } else {
+                            entry.metadata().unwrap().len()
+                        };
 
                         let file_type_str: &str = if is_dir { "Directory" } else { "File" };
                         ui.horizontal(|ui| {
