@@ -15,3 +15,4 @@ File and Folder dialog open at same time.
 File and Folder dialog x button doesnt work (remove the X button in favor of the close button).
 Check if file or folder exists before creating it, and if it does, prompt the user to overwrite it, don't instantly overwrite it.
 Cancel button doesnt close delete dialog.
+Make checkbox for showing hidden and system files bigger.

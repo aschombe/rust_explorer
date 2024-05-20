@@ -1,14 +1,15 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use eframe::{egui, App};
+use home::home_dir;
 use std::{
-    fs,
-    // thread,
+    fs, 
     path::PathBuf,
+    os::windows::fs::MetadataExt, 
     // collections::HashMap,
     // sync::{Arc, Mutex, MutexGuard},
 };
-use home::home_dir;
+
 // use fs_extra;
 
 pub struct FileExplorer {
@@ -18,6 +19,7 @@ pub struct FileExplorer {
     create_folder_dialog: bool,
     create_file_dialog: bool,
     delete_dialog: bool,
+    show_hidden_files: bool,
     folder_name: String,
     file_name: String,
     selected_file: Option<PathBuf>,
@@ -39,6 +41,7 @@ impl FileExplorer {
             create_folder_dialog: false,
             create_file_dialog: false,
             delete_dialog: false,
+            show_hidden_files: false,
             folder_name: String::new(),
             file_name: String::new(),
             selected_file: None,
@@ -54,6 +57,50 @@ impl FileExplorer {
                 size => size, // otherwise, use the calculated size
             }
     }
+
+    // fn is_hidden(file_path: &PathBuf) -> Result<bool, std::io::Error> {
+    //     let metadata: fs::Metadata = fs::metadata(file_path)?;
+    //     let attributes = metadata.file_attributes();
+
+    //     if (attributes & 0x2) > 0 {
+    //         Ok(true)
+    //     } else {
+    //         Ok(false)
+    //     }
+    // }
+
+    // fn is_system(file_path: &PathBuf) -> Result<bool, std::io::Error> {
+    //     let metadata: fs::Metadata = fs::metadata(file_path)?;
+    //     let attributes = metadata.file_attributes();
+
+    //     if (attributes & 0x4) > 0 {
+    //         Ok(true)
+    //     } else {
+    //         Ok(false)
+    //     }
+    // }
+
+    fn is_hidden_or_system(file_path: &PathBuf) -> Result<bool, std::io::Error> {
+        let metadata: fs::Metadata = fs::metadata(file_path)?;
+        let attributes = metadata.file_attributes();
+
+        if (attributes & 0x2) > 0 || (attributes & 0x4) > 0 {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    // fn is_hidden_or_system(path: &PathBuf) -> bool {
+    //     let path_str: Vec<u16> = OsStr::new(path.to_str().unwrap()).encode_wide().chain(Some(0)).collect();
+    //     unsafe {
+    //         let attributes: u32 = GetFileAttributesW(path_str.as_ptr());
+    //         if attributes == u32::MAX {
+    //             return false; // If the function fails, assume the file is not hidden or system
+    //         }
+    //         (attributes & FILE_ATTRIBUTE_HIDDEN != 0) || (attributes & FILE_ATTRIBUTE_SYSTEM != 0)
+    //     }
+    // }
 
     // fn get_size(&self, path: PathBuf, is_dir: bool, entry: &fs::DirEntry) -> u64 {
     //     let sizes: Arc<Mutex<HashMap<PathBuf, u64>>> = Arc::clone(&self.sizes);
@@ -92,7 +139,7 @@ impl FileExplorer {
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         self.width = ui.available_width();
         self.height = ui.available_height();
-
+        println!("Showing Hidden Files: {}", self.show_hidden_files);
         egui::TopBottomPanel::top("top_panel").show_inside(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new(format!("Current Path: {}", self.path.to_str().unwrap())).size(
@@ -138,6 +185,13 @@ impl FileExplorer {
                 )).clicked() {
                     self.delete_dialog = true;
                 }
+
+                ui.separator();
+
+                // add a checkbox to show hidden and system files
+                if ui.checkbox(&mut false, "Show Hidden and System Files").changed() {
+                    self.show_hidden_files = !self.show_hidden_files;
+                }
             });
         });
 
@@ -167,6 +221,21 @@ impl FileExplorer {
                         let entry: fs::DirEntry = entry.unwrap();
                         let path: PathBuf = entry.path();
                         let name: &str = path.file_name().unwrap().to_str().unwrap();
+
+                        #[cfg(target_os = "windows")]
+                        {
+                            if !self.show_hidden_files && Self::is_hidden_or_system(&path).unwrap()
+                                || !self.show_hidden_files && name.starts_with(".") {
+                                continue;
+                            }
+                        }
+
+                        #[cfg(not(target_os = "windows"))]
+                        {
+                            if !self.show_hidden_files && name.starts_with(".") {
+                                continue;
+                            }
+                        }
 
                         let path_clone: PathBuf = path.clone();
                         let is_dir: bool = entry.metadata().unwrap().is_dir();
