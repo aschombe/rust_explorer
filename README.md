@@ -20,6 +20,7 @@ cargo run
 
 ## Features
 - [x] Traverse directories
+- [x] Display file sizes in readable format
 - [x] Open files in their default program
 - [x] Create files and directories
 - [x] Delete files and directories
@@ -28,7 +29,7 @@ cargo run
 - [x] Can copy current directory to clipboard
 
 ## Todo
-- [ ] Fix file and folder size calculation/display
+- [ ] Fix folder size calculation/display
 - [ ] Maybe add Caching for faster file listing
 - [ ] Fix button sizing and spacing (formatting)
 - [ ] File and folder creation dialog open at same time
