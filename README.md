@@ -10,7 +10,7 @@ This is a simple project to explore the Rust programming language. It is a file 
   - [Features](#features)
   - [Todo](#todo)
   - [Notes](#notes)
-  - [License](#license)
+  <!-- - [License](#license) -->
 
 ## Usage
 To run the project, you need to have Rust installed. You can install Rust by following the instructions on the [official website](https://www.rust-lang.org/tools/install). After installing Rust, you can run the project by running the following command in the project directory:
@@ -41,4 +41,4 @@ cargo run
 ## Notes
 - File sizes: (fs::extra::dir::get_size()) (dir size), (std::fs::metadata().len()) (file size)
 
-## License
+<!-- ## License -->
