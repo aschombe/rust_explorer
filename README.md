@@ -26,7 +26,6 @@ cargo run
 - [x] Show and hide hidden and system files on windows
 - [x] Show hidden files on linux
 - [x] Can copy current directory to clipboard
-- [x] 
 
 ## Todo
 - [ ] Fix file and folder size calculation/display
