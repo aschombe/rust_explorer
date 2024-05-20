@@ -247,73 +247,7 @@ impl FileExplorer {
                                 println!("Selected: {:?}", self.selected_file);
                             }
 
-                            // if is_dir {
-                            //     let response: egui::Response = ui.button(egui::RichText::new(name).size(
-                            //         Self::calculate_window_size(self.width, self.height)
-                            //     )).interact(egui::Sense::click());
-                            //     if response.clicked_by(egui::PointerButton::Primary) {
-                            //         if let Ok(_entries) = fs::read_dir(&path) {
-                            //             self.path = path_clone;
-                            //         }
-                            //     } else if response.clicked_by(egui::PointerButton::Secondary) {
-                            //         self.selected_file = path_clone;
-                            //         println!("Selected: {:?}", self.selected_file);
-                            //     }
-                            // } else {
-                            //     let mut button: egui::Button = egui::Button::new(egui::RichText::new(name).size(
-                            //         Self::calculate_window_size(self.width, self.height)
-                            //     ));
-                            //     button = button.frame(false);
-                            //     let response: egui::Response = ui.add(button);
 
-                            //     if response.clicked_by(egui::PointerButton::Primary) {
-                            //         #[cfg(target_os = "windows")]
-                            //         {
-                            //             // use winapi to open the default program for the file
-                            //             let path_str: &str = path_clone.to_str().unwrap();
-                            //             let path_str: std::ffi::CString = std::ffi::CString::new(path_str).unwrap();
-                            //             unsafe {
-                            //                 winapi::um::shellapi::ShellExecuteA(
-                            //                     std::ptr::null_mut(),
-                            //                     std::ptr::null_mut(),
-                            //                     path_str.as_ptr(),
-                            //                     std::ptr::null(),
-                            //                     std::ptr::null(),
-                            //                     winapi::um::winuser::SW_SHOWNORMAL,
-                            //                 );
-                            //             }
-                            //         }
-                            //         // try to open the file with their default program using xdg-open,
-                            //         // otherwise use the default editor, or nano if the default editor is not set
-                            //         #[cfg(not(target_os = "windows"))]
-                            //         {
-                            //             // let editor = std::env::var("EDITOR").unwrap_or("nano".to_string());
-                            //             // std::process::Command::new(editor)
-                            //             //     .arg(path_clone)
-                            //             //     .spawn()
-                            //             //     .unwrap();
-
-                            //             // mimeapps.list
-
-                            //             let path_str = path_clone.to_str().unwrap();
-                            //             let path_str = std::ffi::CString::new(path_str).unwrap();
-                            //             if let Err(_) = std::process::Command::new("xdg-open")
-                            //                 .arg(path_str)
-                            //                 .spawn()
-                            //             {
-                            //                 let editor = std::env::var("EDITOR").unwrap_or("nano".to_string());
-                            //                 std::process::Command::new(editor)
-                            //                     .arg(path_clone)
-                            //                     .spawn()
-                            //                     .unwrap();
-                            //             }
-                            //         }
-                            //     } else if response.clicked_by(egui::PointerButton::Secondary) {
-                            //         self.selected_file = path_clone;
-                            //         println!("Selected: {:?}", self.selected_file);
-                            //     }
-                            // }
-                            
                             match size {
                                 0..=999 => ui.label(egui::RichText::new(format!("{} B", size)).size(
                                     Self::calculate_window_size(self.width, self.height)
