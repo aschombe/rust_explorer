@@ -1,6 +1,6 @@
 # Rust Explorer
 
-##
+## Description
 This is a simple project to explore the Rust programming language. It is a file explorer that can open, create, delete, and list files and directories. It can also show and hide hidden and system files on windows, and hidden files on linux.
 
 ## Table of Contents
