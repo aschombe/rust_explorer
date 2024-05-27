@@ -21,7 +21,7 @@ cargo run
 ## Features
 - [x] Traverse directories
 - [x] Display file sizes in readable format
-- [x] Open files in their default program
+- [x] Open files in their default program (windows, on linux it opens with EDITOR or nano)
 - [x] Create files and directories
 - [x] Delete files and directories
 - [x] Show and hide hidden and system files on windows
@@ -40,6 +40,6 @@ cargo run
 - [ ] Add renaming files and folders button
 
 ## Notes
-- File sizes: (fs::extra::dir::get_size()) (dir size), (std::fs::metadata().len()) (file size)
+- Nothing to see here
 
 <!-- ## License -->
