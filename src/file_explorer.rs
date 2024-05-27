@@ -229,36 +229,6 @@ impl FileExplorer {
                                             self.path = path_clone;
                                         }
                                     } else {
-                                        /*#[cfg(target_os = "windows")]
-                                        {
-                                            // use winapi to open the default program for the file
-                                            let path_str: &str = path_clone.to_str().unwrap();
-                                            let path_str: std::ffi::CString =
-                                                std::ffi::CString::new(path_str).unwrap();
-                                            unsafe {
-                                                winapi::um::shellapi::ShellExecuteA(
-                                                    std::ptr::null_mut(),
-                                                    std::ptr::null_mut(),
-                                                    path_str.as_ptr(),
-                                                    std::ptr::null(),
-                                                    std::ptr::null(),
-                                                    winapi::um::winuser::SW_SHOWNORMAL,
-                                                );
-                                            }
-                                        }
-                                        #[cfg(not(target_os = "windows"))]
-                                        {
-                                            /*
-                                            let editor: String = std::env::var("EDITOR")
-                                                .unwrap_or("nano".to_string());
-                                            std::process::Command::new(editor)
-                                                .arg(path_clone)
-                                                .spawn()
-                                                .unwrap();*/
-
-                                            // rewrite to use mime
-                                            open::that(path_clone).unwrap();
-                                        }*/
                                         open::that(path_clone).unwrap();
                                     }
                                 } else if response.clicked_by(egui::PointerButton::Secondary) {
