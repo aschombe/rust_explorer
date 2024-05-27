@@ -21,7 +21,7 @@ cargo run
 ## Features
 - [x] Traverse directories
 - [x] Display file sizes in readable format
-- [x] Open files in their default program (windows, on linux it opens with EDITOR or nano)
+- [x] Open files in their default program (Windows and *nix)
 - [x] Create files and directories
 - [x] Delete files and directories
 - [x] Show and hide hidden and system files on windows
