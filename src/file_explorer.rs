@@ -229,7 +229,7 @@ impl FileExplorer {
                                             self.path = path_clone;
                                         }
                                     } else {
-                                        #[cfg(target_os = "windows")]
+                                        /*#[cfg(target_os = "windows")]
                                         {
                                             // use winapi to open the default program for the file
                                             let path_str: &str = path_clone.to_str().unwrap();
@@ -248,15 +248,18 @@ impl FileExplorer {
                                         }
                                         #[cfg(not(target_os = "windows"))]
                                         {
+                                            /*
                                             let editor: String = std::env::var("EDITOR")
                                                 .unwrap_or("nano".to_string());
                                             std::process::Command::new(editor)
                                                 .arg(path_clone)
                                                 .spawn()
-                                                .unwrap();
-                                            // maybe rewrite this to use mime list/guess to open
-                                            // with default program
-                                        }
+                                                .unwrap();*/
+
+                                            // rewrite to use mime
+                                            open::that(path_clone).unwrap();
+                                        }*/
+                                        open::that(path_clone).unwrap();
                                     }
                                 } else if response.clicked_by(egui::PointerButton::Secondary) {
                                     self.selected_file = Some(path_clone);
